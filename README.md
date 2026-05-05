@@ -2,21 +2,22 @@
 
 ## 📡 Overview
 
-A caching server built with Go. It forwards requests to an origin server, caches responses, and improves performance on repeated requests.
+A caching server built with Go. It forwards requests to an origin server, caches responses to disk, and improves performance on repeated requests.
 
-* **Efficient response caching (using LRU cache)**
+* **Disk-based caching** — responses persist across restarts
 * **Fast performance using Go's concurrency**
-* **Easy to extend for more advanced caching and request handling**
+* **Simple flat-file storage** — each cached path becomes a file
 * **Compiles to binary**
 
 > 💡 **Prerequisites:** Make sure you have Go installed on your machine if you want to recompile the binary.
 
 ## 🧠 How It Works
 
-| Command                    | Description                      |
-| -------------------------- | -------------------------------- |
+| Command                                       | Description                        |
+| --------------------------------------------- | ---------------------------------- |
 | `./caching-proxy --port 3000 --origin http://dummyjson.com`   | Starts the Proxy      |
-| `./caching-proxy --clear-cache` | Manually clear the cache |
+| `./caching-proxy --clear-cache`               | Manually clear the cache          |
+| `./caching-proxy --origin http://example.com --cache-dir /var/cache/proxy` | Custom cache directory |
 
 ### Send a request to:
 
@@ -33,14 +34,6 @@ git clone https://github.com/petrusjohannesmaas/roadmap.sh
 cd caching-proxy
 ```
 
-### Install Dependencies
-
-Use the Go package manager to install the required external package:
-
-```sh
-go get github.com/hashicorp/golang-lru
-```
-
 ### Build the Project
 
 ```sh
@@ -53,18 +46,18 @@ This will compile a binary named `caching-proxy` in the project folder.
 
 Consider these packages to enhance or optimize your proxy:
 
-| Package                                                 | Description                                   |
-| ------------------------------------------------------- | --------------------------------------------- |
-| [`fasthttp`](https://github.com/valyala/fasthttp)       | High-performance HTTP server/client           |
-| [`golang-lru`](https://github.com/hashicorp/golang-lru) | Simple and efficient LRU cache implementation |
-| [`fiber`](https://github.com/gofiber/fiber)             | Express.js-style web framework for Go         |
+| Package                              | Description                         |
+| ------------------------------------ | ----------------------------------- |
+| [`fasthttp`](https://github.com/valyala/fasthttp) | High-performance HTTP server/client |
+| [`fiber`](https://github.com/gofiber/fiber)   | Express.js-style web framework for Go |
+| [`bbolt`](https://github.com/etcd-io/bbolt)   | Embedded key-value store            |
 
 ## 📈 Future Enhancements
 
 * Add TTL-based cache expiration
+* Add max cache size with LRU-style eviction
 * Improve logging & error handling
 * Support more HTTP methods (e.g., POST, PUT)
-* Persist cache to disk between restarts
 * Secure endpoint for manual cache invalidation
 
 ## 📄 License

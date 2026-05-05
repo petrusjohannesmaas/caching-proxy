@@ -3,20 +3,20 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/hashicorp/golang-lru"
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 )
 
 var (
-	port       int
-	origin     string
-	clearCache bool
-	cache      *lru.Cache
+	port          int
+	origin        string
+	clearCache    bool
+	cacheDir      string
 )
 
-// Fetch and cache responses
 func fetchAndCache(w http.ResponseWriter, req *http.Request) {
 	url := origin + req.URL.Path
 	log.Printf("Fetching from origin: %s", url)
@@ -34,16 +34,18 @@ func fetchAndCache(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	cache.Add(req.URL.Path, data) // Add to cache
+	cachePath := filepath.Join(cacheDir, req.URL.Path)
+	os.MkdirAll(filepath.Dir(cachePath), 0755)
+	os.WriteFile(cachePath, data, 0644)
 	w.Header().Set("X-Cache", "MISS")
 	w.Write(data)
 }
 
-// Handle requests and serve cached responses
 func handler(w http.ResponseWriter, req *http.Request) {
-	if data, ok := cache.Get(req.URL.Path); ok {
+	cachePath := filepath.Join(cacheDir, req.URL.Path)
+	if data, err := os.ReadFile(cachePath); err == nil {
 		w.Header().Set("X-Cache", "HIT")
-		w.Write(data.([]byte))
+		w.Write(data)
 		log.Printf("Served from cache: %s", req.URL.Path)
 	} else {
 		fetchAndCache(w, req)
@@ -51,33 +53,27 @@ func handler(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
-	// Define flags
 	flag.IntVar(&port, "port", 3000, "Port for proxy server")
 	flag.StringVar(&origin, "origin", "", "Origin server URL")
+	flag.StringVar(&cacheDir, "cache-dir", "/tmp/caching-proxy", "Cache directory")
 	flag.BoolVar(&clearCache, "clear-cache", false, "Clears the cache and exits")
 
-	// Parse flags **only once**
 	flag.Parse()
 
-	// Handle cache clearing request separately
 	if clearCache {
-		cache, _ = lru.New(100) // Initialize cache
-		cache.Purge()           // Clear all entries
+		os.RemoveAll(cacheDir)
 		fmt.Println("Cache cleared!")
-		return // Exit program immediately
+		return
 	}
 
-	// Ensure origin is provided
 	if origin == "" {
 		fmt.Println("Usage: caching-proxy --port <number> --origin <url>")
 		return
 	}
 
-	// Initialize cache
-	cache, _ = lru.New(100)
+	os.MkdirAll(cacheDir, 0755)
 
-	// Set up HTTP server
 	http.HandleFunc("/", handler)
 	fmt.Printf("Caching proxy server running on port %d, forwarding to %s\n", port, origin)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil)) // Log errors if the server fails
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
 }
